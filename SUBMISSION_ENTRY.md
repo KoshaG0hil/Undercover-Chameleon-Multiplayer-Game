@@ -20,9 +20,9 @@ Undercover Chameleon — Real-Time Cyber Social Deduction Party Game
 - **Local File Path:**  
   `assets/landing-cover.png`
 
-### c. Project Description
+### c. Project Description (421 / 500 characters)
 ```text
-A real-time multiplayer social deduction web game built for phones and laptops with zero installs, zero accounts, and instant room synchronization via WebRTC P2P data mesh. In every round, all players receive a secret topic word except one secret Chameleon. Players take turns submitting 1-word clues to prove they know the secret without giving it away, followed by an emergency timed voting ballot. If caught, the Chameleon gets one final chance to steal victory by guessing the secret word from decoy candidates. Features real-time screen sync, built-in AI agent bots for instant solo testing/judging, Web Audio synth sound effects, tactile mobile haptics, and QR code camera scanning.
+A real-time multiplayer social deduction game for phones and laptops with zero login or install. In each round, everyone knows the secret word except one hidden Chameleon. Players transmit 1-word clues, bluff to blend in, and vote out the fake. If caught, the Chameleon can still win by guessing the secret word. Features instant WebRTC screen sync, AI bots for solo judging, procedural sound effects, and mobile haptics.
 ```
 
 ### d. Project Link / URL
