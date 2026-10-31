@@ -1,0 +1,33 @@
+name: CI - Undercover Chameleon Multiplayer
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Core Game Logic Unit Tests (Node.js)
+        run: |
+          node tests/test_game_logic.js
+
+      - name: Run Pytest Wrapper
+        run: |
+          pip install pytest
+          pytest -v tests/test_game_engine.py

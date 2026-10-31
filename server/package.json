@@ -1,0 +1,13 @@
+{
+  "name": "undercover-chameleon-server",
+  "version": "1.0.0",
+  "description": "Optional Centralized WebSocket Server for Undercover Chameleon Multiplayer",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}

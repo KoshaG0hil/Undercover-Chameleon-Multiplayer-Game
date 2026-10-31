@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Undercover Chameleon | Real-Time Multiplayer Cyber Party Game</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- PeerJS WebRTC P2P Data Channels -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- QRCode.js for 1-Tap Mobile Camera Join -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Canvas Confetti for Victory Celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  
+  <!-- Custom Neon Cyber Styling -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen flex flex-col bg-[#070b14] text-slate-100 cyber-grid-bg">
+
+  <!-- Top Bar / Navigation -->
+  <header class="border-b border-slate-800/80 bg-[#0c1322]/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-2.5 cursor-pointer" onclick="app.showLanding()">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 via-pink-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
+          <i class="fa-solid fa-mask text-lg"></i>
+        </div>
+        <div>
+          <span class="font-cyber font-black tracking-wider text-base text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-400 to-amber-400">CHAMELEON</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-400 uppercase tracking-widest ml-1 font-bold">PROTOCOL</span>
+        </div>
+      </div>
+
+      <!-- Center Room Code Pill (Hidden on landing) -->
+      <div id="navRoomBadge" class="hidden flex items-center space-x-2 bg-slate-900/90 border border-slate-700/80 rounded-full px-3 py-1 text-xs font-mono">
+        <span class="text-slate-400">ROOM:</span>
+        <span id="navRoomCode" class="text-cyan-400 font-bold tracking-widest">----</span>
+        <button onclick="app.copyRoomLink()" title="Copy Room Invite Link" class="text-slate-400 hover:text-cyan-400 transition-colors ml-1">
+          <i class="fa-regular fa-copy"></i>
+        </button>
+        <button onclick="app.openQRModal()" title="Show Join QR Code" class="text-slate-400 hover:text-pink-400 transition-colors">
+          <i class="fa-solid fa-qrcode"></i>
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-2">
+        <button onclick="app.toggleSound()" id="soundBtn" class="w-9 h-9 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition-all">
+          <i class="fa-solid fa-volume-high text-sm"></i>
+        </button>
+        <button onclick="app.openRulesModal()" class="w-9 h-9 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition-all" title="How to Play">
+          <i class="fa-solid fa-circle-question text-sm"></i>
+        </button>
+        <button id="settingsBtn" onclick="app.openSettingsModal()" class="hidden w-9 h-9 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition-all" title="Game Settings">
+          <i class="fa-solid fa-gear text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewport Container -->
+  <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full flex flex-col justify-center">
+
+    <!-- ======================================================================
+         VIEW 1: LANDING SCREEN (Host or Join)
+         ====================================================================== -->
+    <div id="viewLanding" class="space-y-8 max-w-lg mx-auto w-full">
+      <!-- Hero Title -->
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/60 text-cyan-400 text-xs font-mono font-semibold tracking-wider">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          REAL-TIME MULTIPLAYER · ZERO LOGIN
+        </div>
+        <h1 class="text-4xl sm:text-5xl font-cyber font-black tracking-tight text-white">
+          UNDERCOVER <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-cyan-400">CHAMELEON</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-400 font-mono">
+          Everyone knows the secret word except 1 impostor. Give 1-word clues, bluff your way through, and vote out the fake!
+        </p>
+      </div>
+
+      <!-- Player Profile Card -->
+      <div class="cyber-card rounded-2xl p-6 border border-slate-800/80 shadow-2xl space-y-5">
+        <div>
+          <label class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Choose Your Codename:</label>
+          <input type="text" id="playerNameInput" maxlength="15" placeholder="e.g. Phantom, Cipher, Glitch..." value="Agent Zero" class="mt-1.5 w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all">
+        </div>
+
+        <div>
+          <label class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Select Cyber Avatar:</label>
+          <div class="grid grid-cols-4 sm:grid-cols-8 gap-2.5 mt-2" id="avatarPicker">
+            <!-- Avatars dynamically populated by JS -->
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button onclick="app.hostGame()" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-cyber font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-tower-broadcast"></i>
+            <span>Create Room (Host)</span>
+          </button>
+          <button onclick="app.showJoinSection()" class="w-full py-3.5 px-4 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 font-cyber font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Join Room (Friend)</span>
+          </button>
+        </div>
+
+        <!-- Join Room Input Section (Collapsible) -->
+        <div id="joinSection" class="hidden pt-4 border-t border-slate-800/80 space-y-3">
+          <label class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Enter 4-Letter Room Code:</label>
+          <div class="flex gap-2">
+            <input type="text" id="roomCodeInput" maxlength="6" placeholder="e.g. CYBR" class="flex-1 uppercase text-center tracking-widest font-mono text-lg font-bold bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            <button onclick="app.joinGame()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-400 hover:to-rose-500 text-white font-cyber font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-pink-500/25 flex items-center gap-2">
+              <span>Connect</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         VIEW 2: LOBBY SCREEN (Waiting for Players)
+         ====================================================================== -->
+    <div id="viewLobby" class="hidden space-y-6 max-w-2xl mx-auto w-full">
+      <!-- Room Code Banner & QR Code Trigger -->
+      <div class="cyber-card rounded-2xl p-6 border border-slate-800 text-center space-y-4">
+        <p class="text-xs font-mono uppercase tracking-widest text-slate-400">Share this Room Code with your friends:</p>
+        <div class="flex items-center justify-center gap-3">
+          <span id="lobbyRoomCode" class="text-4xl sm:text-5xl font-mono font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">----</span>
+          <button onclick="app.copyRoomLink()" class="p-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-cyan-400 border border-slate-700 transition-all" title="Copy Invite Link">
+            <i class="fa-regular fa-copy text-lg"></i>
+          </button>
+          <button onclick="app.openQRModal()" class="p-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-pink-400 border border-slate-700 transition-all" title="Show QR Code">
+            <i class="fa-solid fa-qrcode text-lg"></i>
+          </button>
+        </div>
+        <p class="text-xs text-slate-400 font-mono">Friends can join from their phone or laptop with no download required!</p>
+      </div>
+
+      <!-- Player Roster Grid -->
+      <div class="cyber-card rounded-2xl p-6 border border-slate-800 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">Agents in Roster:</span>
+            <span id="playerCountBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">1 Ready</span>
+          </div>
+          <span class="text-[11px] font-mono text-slate-400">Need at least 2 players</span>
+        </div>
+
+        <div id="rosterGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- Host Action Controls -->
+      <div id="hostLobbyControls" class="space-y-3">
+        <button id="startGameBtn" onclick="app.startGame()" class="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 via-pink-500 to-amber-500 hover:opacity-95 text-white font-cyber font-black text-sm tracking-widest uppercase transition-all shadow-xl shadow-cyan-500/20 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-play"></i>
+          <span>Launch Mission</span>
+        </button>
+        <p class="text-center text-xs text-slate-500 font-mono">Only the Room Commander (Host) can initiate the mission.</p>
+      </div>
+      <div id="clientLobbyWait" class="hidden text-center py-4">
+        <p class="text-sm font-mono text-cyan-400 animate-pulse">Waiting for the Room Commander to launch the mission...</p>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         VIEW 3: BRIEFING SCREEN (Secret Word / Chameleon Reveal)
+         ====================================================================== -->
+    <div id="viewBriefing" class="hidden space-y-6 max-w-xl mx-auto w-full text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400">
+        <i class="fa-solid fa-stopwatch text-amber-400"></i>
+        <span>Briefing Closes in: <strong id="briefingTimer" class="text-amber-400">8</strong>s</span>
+      </div>
+
+      <div id="briefingCard" class="cyber-card rounded-2xl p-8 border border-slate-700 shadow-2xl space-y-6">
+        <div class="space-y-1">
+          <span id="briefingCategoryBadge" class="text-xs font-mono uppercase tracking-widest px-3 py-1 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">CATEGORY: CYBERPUNK</span>
+          <h2 id="briefingRoleHeader" class="text-2xl sm:text-3xl font-cyber font-black tracking-tight text-white mt-3">CONFIDENTIAL DOSSIER</h2>
+        </div>
+
+        <!-- Secret Word Box -->
+        <div id="briefingWordBox" class="p-6 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-2">
+          <p class="text-xs font-mono uppercase tracking-wider text-slate-400">Target Secret Word:</p>
+          <div id="briefingSecretWord" class="text-3xl sm:text-4xl font-cyber font-black tracking-wider text-cyan-400 text-glow-cyan break-words">------</div>
+        </div>
+
+        <p id="briefingInstructions" class="text-xs sm:text-sm text-slate-300 font-mono leading-relaxed">
+          Remember this secret word! When your turn comes, give a subtle 1-word clue to prove you are an Agent without giving it away to the Chameleon!
+        </p>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         VIEW 4: CLUES SCREEN (Synchronized Turns)
+         ====================================================================== -->
+    <div id="viewClues" class="hidden space-y-6 max-w-2xl mx-auto w-full">
+      <!-- Active Turn Status Header -->
+      <div class="cyber-card rounded-2xl p-5 border border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="turnAvatar" class="w-10 h-10 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-400 text-base">
+            <i class="fa-solid fa-user-ninja"></i>
+          </div>
+          <div>
+            <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Active Turn:</div>
+            <div id="turnPlayerName" class="text-sm font-cyber font-bold text-white">Agent Glitch</div>
+          </div>
+        </div>
+
+        <div class="text-right">
+          <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Turn Clock:</div>
+          <div id="turnTimer" class="text-xl font-mono font-bold text-amber-400">30s</div>
+        </div>
+      </div>
+
+      <!-- Clue Submission Input Box (Visible only on player's turn) -->
+      <div id="myClueInputCard" class="hidden cyber-card rounded-2xl p-5 border-2 border-cyan-500/80 glow-cyan space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-keyboard"></i> YOUR TURN: ENTER 1-WORD CLUE
+          </span>
+          <span id="clueCategoryHint" class="text-[10px] font-mono text-slate-400">Category: Tech</span>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="clueTextInput" maxlength="25" placeholder="Enter single clue word..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+          <button onclick="app.submitClue()" class="px-6 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-cyber font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-cyan-500/30">
+            Submit
+          </button>
+        </div>
+      </div>
+
+      <!-- Waiting Indicator for other players -->
+      <div id="waitingTurnCard" class="cyber-card rounded-2xl p-4 border border-slate-800 text-center">
+        <p class="text-xs font-mono text-slate-400">
+          Listen closely to every clue! The Chameleon is trying to blend in...
+        </p>
+      </div>
+
+      <!-- Live Clue History Log -->
+      <div class="cyber-card rounded-2xl p-6 border border-slate-800 space-y-3">
+        <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+          <span>Clue Transmission Feed:</span>
+          <span id="clueCountText" class="text-slate-400 font-normal">0 Submitted</span>
+        </h3>
+        <div id="clueFeed" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         VIEW 5: VOTING SCREEN (Emergency Ballot)
+         ====================================================================== -->
+    <div id="viewVoting" class="hidden space-y-6 max-w-2xl mx-auto w-full">
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-950/80 border border-rose-800 text-rose-400 text-xs font-mono font-bold tracking-wider">
+          <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+          EMERGENCY BALLOT · VOTE THE CHAMELEON
+        </div>
+        <h2 class="text-3xl font-cyber font-black tracking-tight text-white">WHO IS THE IMPOSTOR?</h2>
+        <p class="text-xs font-mono text-slate-400">
+          Voting closes in: <strong id="votingTimer" class="text-rose-400 font-bold">45</strong>s. Tap your top suspect!
+        </p>
+      </div>
+
+      <!-- Suspect Voting Cards Grid -->
+      <div id="suspectsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Populated dynamically by JS -->
+      </div>
+
+      <div class="cyber-card rounded-xl p-4 border border-slate-800 text-center">
+        <span id="voteStatusText" class="text-xs font-mono text-cyan-400">Select a suspect above to lock in your vote.</span>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         VIEW 6: CHAMELEON'S LAST STAND GUESS
+         ====================================================================== -->
+    <div id="viewChameleonGuess" class="hidden space-y-6 max-w-xl mx-auto w-full text-center">
+      <div class="cyber-card rounded-2xl p-8 border-2 border-rose-500 glow-pink space-y-5">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800 text-xs font-mono font-bold tracking-wider">
+          <i class="fa-solid fa-skull text-xs"></i>
+          CHAMELEON CAUGHT! LAST CHANCE STEAL
+        </div>
+        <h2 class="text-3xl font-cyber font-black tracking-tight text-white">GUESS THE SECRET WORD</h2>
+        <p class="text-xs font-mono text-slate-300 leading-relaxed">
+          The Agents identified the Chameleon! However, if the Chameleon can guess the secret word, they <strong class="text-pink-400">steal the victory!</strong>
+        </p>
+
+        <!-- Candidate Words Grid for Chameleon -->
+        <div id="guessCandidatesGrid" class="grid grid-cols-2 gap-3 pt-2">
+          <!-- Populated dynamically -->
+        </div>
+
+        <p id="chameleonWaitText" class="hidden text-xs font-mono text-amber-400 animate-pulse">
+          Awaiting the Chameleon's final guess...
+        </p>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         VIEW 7: ROUND OVER & SCOREBOARD
+         ====================================================================== -->
+    <div id="viewRoundOver" class="hidden space-y-6 max-w-xl mx-auto w-full text-center">
+      <div id="roundOutcomeCard" class="cyber-card rounded-2xl p-8 border border-slate-700 shadow-2xl space-y-4">
+        <div id="winnerIcon" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl shadow-xl">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <h2 id="winnerTitle" class="text-3xl font-cyber font-black tracking-tight text-white">VICTORY</h2>
+        <p id="winnerReason" class="text-xs sm:text-sm font-mono text-slate-300 leading-relaxed max-w-md mx-auto">
+          Reason details...
+        </p>
+
+        <!-- Revealed Secret Word Box -->
+        <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-slate-400">The Secret Word Was:</p>
+          <div id="revealedSecretWord" class="text-2xl font-cyber font-black text-cyan-400">------</div>
+        </div>
+      </div>
+
+      <!-- Leaderboard Roster -->
+      <div class="cyber-card rounded-2xl p-6 border border-slate-800 space-y-3">
+        <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">Mission Leaderboard:</h3>
+        <div id="scoreboardList" class="space-y-2">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Next Round Button (Host only) -->
+      <div id="hostNextRoundControls">
+        <button onclick="app.nextRound()" class="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-pink-500 hover:opacity-90 text-white font-cyber font-black text-sm tracking-widest uppercase transition-all shadow-xl shadow-cyan-500/20 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>Next Mission</span>
+        </button>
+      </div>
+      <div id="clientNextRoundWait" class="hidden text-xs font-mono text-cyan-400">
+        Waiting for the Room Commander to launch the next mission...
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======================================================================
+       MODAL 1: QR CODE MODAL (Scan to Join on Phone)
+       ====================================================================== -->
+  <div id="qrModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur flex items-center justify-center p-4">
+    <div class="cyber-card rounded-2xl p-6 max-w-sm w-full border border-slate-700 text-center space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <span class="text-xs font-mono font-bold uppercase text-slate-300">Scan to Join from Phone</span>
+        <button onclick="app.closeQRModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div id="qrcode" class="p-4 bg-white rounded-xl mx-auto inline-block shadow-lg"></div>
+      <div class="text-xs font-mono text-slate-300">
+        Room: <strong id="qrRoomCode" class="text-cyan-400 font-bold">----</strong>
+      </div>
+      <button onclick="app.copyRoomLink()" class="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-200 border border-slate-700 transition-all flex items-center justify-center gap-2">
+        <i class="fa-regular fa-copy"></i>
+        <span>Copy Invite URL</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 2: HOW TO PLAY MODAL
+       ====================================================================== -->
+  <div id="rulesModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur flex items-center justify-center p-4">
+    <div class="cyber-card rounded-2xl p-6 max-w-md w-full border border-slate-700 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <span class="text-xs font-mono font-bold uppercase text-cyan-400 flex items-center gap-2">
+          <i class="fa-solid fa-book-open"></i> How to Play Chameleon Protocol
+        </span>
+        <button onclick="app.closeRulesModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="space-y-3 text-xs font-mono text-slate-300 leading-relaxed">
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+          <strong class="text-cyan-400 flex items-center gap-1.5"><i class="fa-solid fa-user-shield"></i> 1. The Secret Briefing</strong>
+          <p class="text-slate-400">All Agents see the secret word (e.g. "Taco Bell"). The Chameleon only sees the category and has NO IDEA what the word is!</p>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+          <strong class="text-amber-400 flex items-center gap-1.5"><i class="fa-solid fa-comment-dots"></i> 2. The 1-Word Clues</strong>
+          <p class="text-slate-400">Taking turns, every player gives a 1-word clue. Don't be too obvious or the Chameleon will guess the word. Don't be too vague or you'll look like the Chameleon!</p>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+          <strong class="text-pink-400 flex items-center gap-1.5"><i class="fa-solid fa-check-to-slot"></i> 3. Voting & The Steal</strong>
+          <p class="text-slate-400">Vote on who looks suspicious. If the Chameleon is caught, they get ONE last chance to guess the secret word to steal the win!</p>
+        </div>
+      </div>
+      <button onclick="app.closeRulesModal()" class="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-cyber font-bold text-xs uppercase tracking-wider">
+        Got it! Let's Play
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 3: ROOM SETTINGS MODAL (Host Only)
+       ====================================================================== -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur flex items-center justify-center p-4">
+    <div class="cyber-card rounded-2xl p-6 max-w-md w-full border border-slate-700 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <span class="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-cyan-400"></i> Mission Parameters
+        </span>
+        <button onclick="app.closeSettingsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs font-mono">
+        <div>
+          <label class="font-bold text-slate-400 uppercase">Clue Turn Timer:</label>
+          <select id="settingTurnTimer" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white">
+            <option value="20">20 Seconds (Fast & Furious)</option>
+            <option value="30" selected>30 Seconds (Balanced)</option>
+            <option value="45">45 Seconds (Relaxed)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-400 uppercase">Chameleon Count:</label>
+          <select id="settingChameleonCount" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white">
+            <option value="1" selected>1 Chameleon</option>
+            <option value="2">2 Chameleons (Recommended 6+ players)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-400 uppercase">Active Word Categories:</label>
+          <div class="grid grid-cols-2 gap-2 mt-2" id="settingsCategoriesList">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <button onclick="app.saveSettings()" class="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-cyber font-bold text-xs uppercase tracking-wider">
+        Save Parameters
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-cyan-950 border border-cyan-800 text-cyan-300 text-xs font-mono font-bold shadow-xl flex items-center gap-2">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="toastMessage">Notification message</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/words.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/network.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

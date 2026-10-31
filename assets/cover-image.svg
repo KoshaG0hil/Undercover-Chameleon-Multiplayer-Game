@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#060a12" />
+      <stop offset="50%" stop-color="#0c1322" />
+      <stop offset="100%" stop-color="#060a12" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#111c33" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0b1220" stop-opacity="0.9" />
+    </linearGradient>
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glowPink" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+
+  <!-- Ambient Glow Orbs -->
+  <circle cx="200" cy="180" r="160" fill="#06b6d4" opacity="0.12" filter="blur(40px)" />
+  <circle cx="1000" cy="450" r="180" fill="#ec4899" opacity="0.12" filter="blur(40px)" />
+
+  <!-- Top Badge -->
+  <g transform="translate(600, 95)">
+    <rect x="-240" y="-18" width="480" height="36" rx="18" fill="#042f2e" stroke="#0d9488" stroke-width="1.5" />
+    <text x="0" y="5" fill="#2dd4bf" font-family="'Orbitron', 'Inter', monospace" font-size="13" font-weight="700" letter-spacing="2" text-anchor="middle">
+      OPENAI X HANDSHAKE MULTIPLAYER CHALLENGE
+    </text>
+  </g>
+
+  <!-- Center Logo Mask Emblem -->
+  <g transform="translate(600, 205)">
+    <!-- Hexagonal Crest -->
+    <polygon points="0,-60 52,-30 52,30 0,60 -52,30 -52,-30" fill="#0f172a" stroke="url(#textGrad)" stroke-width="3" filter="url(#glowPink)" />
+    <!-- Mask Icon -->
+    <path d="M -26 -10 C -26 -20 26 -20 26 -10 C 26 15 15 25 0 28 C -15 25 -26 15 -26 -10 Z" fill="none" stroke="#06b6d4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="-10" cy="-3" r="4.5" fill="#ec4899" />
+    <circle cx="10" cy="-3" r="4.5" fill="#ec4899" />
+  </g>
+
+  <!-- Title Text -->
+  <text x="600" y="325" fill="#ffffff" font-family="'Orbitron', sans-serif" font-size="52" font-weight="900" letter-spacing="3" text-anchor="middle">
+    UNDERCOVER <tspan fill="url(#textGrad)" filter="url(#glowPink)">CHAMELEON</tspan>
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="375" fill="#94a3b8" font-family="'JetBrains Mono', monospace" font-size="17" font-weight="500" letter-spacing="1" text-anchor="middle">
+    Real-Time Social Deduction &amp; Bluffing Game · P2P WebRTC · Zero Login
+  </text>
+
+  <!-- Feature Featurettes Bar -->
+  <g transform="translate(150, 435)">
+    <!-- Card 1: WebRTC Sync -->
+    <rect x="0" y="0" width="205" height="100" rx="14" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.5" />
+    <text x="102" y="42" fill="#06b6d4" font-family="'Orbitron', sans-serif" font-size="14" font-weight="700" text-anchor="middle">0-SERVER SYNC</text>
+    <text x="102" y="68" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="11" text-anchor="middle">Sub-50ms WebRTC Mesh</text>
+
+    <!-- Card 2: 1-Tap QR Join -->
+    <rect x="230" y="0" width="205" height="100" rx="14" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.5" />
+    <text x="332" y="42" fill="#ec4899" font-family="'Orbitron', sans-serif" font-size="14" font-weight="700" text-anchor="middle">1-TAP QR JOIN</text>
+    <text x="332" y="68" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="11" text-anchor="middle">Instant Phone Camera Link</text>
+
+    <!-- Card 3: Web Audio Synth -->
+    <rect x="460" y="0" width="205" height="100" rx="14" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.5" />
+    <text x="562" y="42" fill="#f59e0b" font-family="'Orbitron', sans-serif" font-size="14" font-weight="700" text-anchor="middle">CYBER SYNTH SFX</text>
+    <text x="562" y="68" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="11" text-anchor="middle">Procedural Web Audio</text>
+
+    <!-- Card 4: 120+ Words -->
+    <rect x="690" y="0" width="205" height="100" rx="14" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.5" />
+    <text x="792" y="42" fill="#10b981" font-family="'Orbitron', sans-serif" font-size="14" font-weight="700" text-anchor="middle">120+ SECRET WORDS</text>
+    <text x="792" y="68" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="11" text-anchor="middle">6 Themed Category Packs</text>
+  </g>
+
+  <!-- Author Tag -->
+  <text x="600" y="585" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="12" text-anchor="middle">
+    Architected by Kosha Gohil · GitHub: @KoshaG0hil · Oct 2026
+  </text>
+</svg>
