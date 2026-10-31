@@ -14,6 +14,7 @@ class NetworkCoordinator {
     this.myPeerId = null;
     this.myPlayerId = null;
     this.localChannel = null;
+    this.latestState = null;
 
     // Callbacks
     this.onStateReceived = () => {};
@@ -23,9 +24,6 @@ class NetworkCoordinator {
     this.onError = () => {};
   }
 
-  /**
-   * Generates a 4-letter memorable cyberpunk room code
-   */
   generateRoomCode() {
     const consonants = "BCDFGHJKLMNPQRSTVWXYZ";
     const vowels = "AEIOU";
@@ -37,9 +35,17 @@ class NetworkCoordinator {
     );
   }
 
-  /**
-   * Host initializes a new multiplayer game room
-   */
+  getIceConfig() {
+    return {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:global.stun.twilio.com:3478" }
+      ]
+    };
+  }
+
   createRoom(customCode = null) {
     return new Promise((resolve, reject) => {
       this.isHost = true;
@@ -48,16 +54,14 @@ class NetworkCoordinator {
 
       this.setupLocalBroadcastChannel();
 
-      // Initialize PeerJS host
-      this.peer = new Peer(hostPeerId, {
-        debug: 1,
-        config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:global.stun.twilio.com:3478" }
-          ]
-        }
-      });
+      try {
+        this.peer = new Peer(hostPeerId, {
+          debug: 1,
+          config: this.getIceConfig()
+        });
+      } catch (err) {
+        return reject(err);
+      }
 
       this.peer.on("open", (id) => {
         this.myPeerId = id;
@@ -69,22 +73,18 @@ class NetworkCoordinator {
       });
 
       this.peer.on("error", (err) => {
-        console.error("PeerJS Host Error:", err);
-        // If room ID is taken, retry with a fresh code
+        console.warn("PeerJS Host Event:", err);
         if (err.type === "unavailable-id") {
+          // If room ID is taken, retry with a fresh code
           this.peer.destroy();
           this.createRoom().then(resolve).catch(reject);
         } else {
           this.onError(err);
-          reject(err);
         }
       });
     });
   }
 
-  /**
-   * Client joins an existing room hosted by a friend
-   */
   joinRoom(roomCode, playerInfo) {
     return new Promise((resolve, reject) => {
       this.isHost = false;
@@ -95,15 +95,14 @@ class NetworkCoordinator {
 
       this.setupLocalBroadcastChannel();
 
-      this.peer = new Peer(clientPeerId, {
-        debug: 1,
-        config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:global.stun.twilio.com:3478" }
-          ]
-        }
-      });
+      try {
+        this.peer = new Peer(clientPeerId, {
+          debug: 1,
+          config: this.getIceConfig()
+        });
+      } catch (err) {
+        return reject(err);
+      }
 
       this.peer.on("open", (id) => {
         this.myPeerId = id;
@@ -112,14 +111,21 @@ class NetworkCoordinator {
         const conn = this.peer.connect(hostPeerId, { reliable: true });
         this.hostConnection = conn;
 
-        conn.on("open", () => {
-          // Send Join handshake
+        const sendJoin = () => {
           conn.send({
             type: "JOIN",
             player: playerInfo
           });
           resolve({ roomCode: this.roomCode, hostId: hostPeerId });
-        });
+        };
+
+        if (conn.open) {
+          sendJoin();
+        } else {
+          conn.on("open", () => {
+            sendJoin();
+          });
+        }
 
         conn.on("data", (data) => {
           if (data && data.type === "SYNC_STATE") {
@@ -128,18 +134,17 @@ class NetworkCoordinator {
         });
 
         conn.on("close", () => {
-          this.onError({ message: "Lost connection to room host." });
+          this.onError({ message: "Host closed or connection lost." });
         });
 
         conn.on("error", (err) => {
+          console.warn("Client connection error:", err);
           this.onError(err);
-          reject(err);
         });
 
-        // Timeout fallback
+        // 6-second fallback to local channel if WebRTC signaling is delayed
         setTimeout(() => {
           if (!conn.open) {
-            // Also notify via BroadcastChannel for multi-tab local play
             if (this.localChannel) {
               this.localChannel.postMessage({
                 type: "LOCAL_JOIN",
@@ -147,14 +152,14 @@ class NetworkCoordinator {
               });
               resolve({ roomCode: this.roomCode, hostId: "local-host" });
             } else {
-              reject(new Error("Unable to connect to host. Please verify the room code."));
+              reject(new Error("Unable to reach room host. Please verify room code."));
             }
           }
-        }, 5000);
+        }, 6000);
       });
 
       this.peer.on("error", (err) => {
-        console.error("PeerJS Client Error:", err);
+        console.warn("PeerJS Client Event:", err);
         this.onError(err);
         reject(err);
       });
@@ -162,15 +167,34 @@ class NetworkCoordinator {
   }
 
   handleIncomingClientConnection(conn) {
+    // Add connection to tracking map immediately
+    this.connections.set(conn.peer, conn);
+
     conn.on("open", () => {
       this.connections.set(conn.peer, conn);
+      // If we have an existing game state, push it to new client immediately
+      if (this.latestState) {
+        conn.send({
+          type: "SYNC_STATE",
+          state: this.latestState
+        });
+      }
     });
 
     conn.on("data", (data) => {
       if (!data) return;
 
       if (data.type === "JOIN") {
+        this.connections.set(conn.peer, conn);
         this.onPeerJoin(data.player, conn.peer);
+
+        // Instantly reply with current game state
+        if (this.latestState) {
+          conn.send({
+            type: "SYNC_STATE",
+            state: this.latestState
+          });
+        }
       } else {
         this.onPlayerAction(data);
       }
@@ -187,10 +211,8 @@ class NetworkCoordinator {
     });
   }
 
-  /**
-   * Broadcasts updated authoritative game state to all connected players
-   */
   broadcastState(gameState) {
+    this.latestState = gameState;
     const payload = {
       type: "SYNC_STATE",
       state: gameState
@@ -199,19 +221,20 @@ class NetworkCoordinator {
     // 1. Send via WebRTC Data Channels
     this.connections.forEach((conn) => {
       if (conn.open) {
-        conn.send(payload);
+        try {
+          conn.send(payload);
+        } catch (e) {
+          console.warn("Error sending to peer:", e);
+        }
       }
     });
 
-    // 2. Send via Local BroadcastChannel (for testing tabs on same computer)
+    // 2. Send via Local BroadcastChannel
     if (this.localChannel) {
       this.localChannel.postMessage(payload);
     }
   }
 
-  /**
-   * Client sends an action to the room host
-   */
   sendActionToHost(action) {
     if (this.hostConnection && this.hostConnection.open) {
       this.hostConnection.send(action);
@@ -230,6 +253,12 @@ class NetworkCoordinator {
         if (this.isHost) {
           if (data.type === "LOCAL_JOIN") {
             this.onPeerJoin(data.player, "local-peer");
+            if (this.latestState) {
+              this.localChannel.postMessage({
+                type: "SYNC_STATE",
+                state: this.latestState
+              });
+            }
           } else if (data.type !== "SYNC_STATE") {
             this.onPlayerAction(data);
           }

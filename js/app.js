@@ -275,14 +275,17 @@ class ApplicationController {
       case "CLUES":
         this.showView("viewClues");
         this.renderClues();
+        this.checkBotTurn();
         break;
       case "VOTING":
         this.showView("viewVoting");
         this.renderVoting();
+        this.checkBotVotes();
         break;
       case "CHAMELEON_GUESS":
         this.showView("viewChameleonGuess");
         this.renderChameleonGuess();
+        this.checkBotChameleonGuess();
         break;
       case "ROUND_OVER":
         this.showView("viewRoundOver");
@@ -300,9 +303,14 @@ class ApplicationController {
     const roster = document.getElementById("rosterGrid");
     const countBadge = document.getElementById("playerCountBadge");
     const startBtn = document.getElementById("startGameBtn");
+    const soloHelper = document.getElementById("soloHelperNotice");
 
     if (countBadge) {
       countBadge.innerText = `${players.length} Ready`;
+    }
+
+    if (soloHelper) {
+      soloHelper.classList.toggle("hidden", players.length >= 2);
     }
 
     if (startBtn) {
@@ -320,11 +328,141 @@ class ApplicationController {
             <div class="text-xs font-bold font-mono text-white truncate flex items-center gap-1">
               <span>${p.name}</span>
               ${p.isHost ? '<i class="fa-solid fa-crown text-amber-400 text-[10px]" title="Room Host"></i>' : ""}
+              ${p.isBot ? '<span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">AI</span>' : ""}
             </div>
             <div class="text-[10px] text-emerald-400 font-mono">Connected</div>
           </div>
         </div>
       `).join("");
+    }
+  }
+
+  addBotPlayer() {
+    if (!this.isHost) return;
+    const botPool = [
+      { name: "Agent Cipher", avatar: "fa-robot" },
+      { name: "Agent Glitch", avatar: "fa-skull" },
+      { name: "Agent Nyx", avatar: "fa-ghost" },
+      { name: "Agent Voxel", avatar: "fa-dragon" },
+      { name: "Agent Pulse", avatar: "fa-biohazard" }
+    ];
+
+    const currentBots = this.game.players.filter(p => p.isBot).length;
+    const pick = botPool[currentBots % botPool.length];
+    const botId = `bot-${Math.random().toString(36).substring(2, 7)}`;
+
+    this.game.addPlayer({
+      id: botId,
+      name: pick.name,
+      avatar: pick.avatar,
+      isHost: false,
+      isBot: true
+    });
+
+    audio.playPlayerJoin();
+    this.showToast(`${pick.name} joined the mission roster!`);
+    this.renderLobby();
+  }
+
+  checkBotTurn() {
+    if (!this.isHost) return;
+    const activePlayerId = this.game.round.clueOrder[this.game.round.currentTurnIndex];
+    const activePlayer = this.game.players.find(p => p.id === activePlayerId);
+
+    if (activePlayer && activePlayer.isBot) {
+      setTimeout(() => {
+        if (this.game.phase !== "CLUES") return;
+        if (this.game.round.clueOrder[this.game.round.currentTurnIndex] !== activePlayer.id) return;
+
+        const isCham = activePlayer.isChameleon;
+        let clue = "Unknown";
+
+        if (isCham) {
+          const vagueClues = ["Classic", "Unique", "Popular", "Essential", "Modern", "Iconic", "Rare", "Global", "Important"];
+          clue = vagueClues[Math.floor(Math.random() * vagueClues.length)];
+        } else {
+          const word = this.game.round.topic?.secretWord || "";
+          clue = this.generateBotClueForWord(word);
+        }
+
+        this.game.submitClue(activePlayer.id, clue);
+      }, 1800);
+    }
+  }
+
+  generateBotClueForWord(word) {
+    const clueDict = {
+      "Neural Link": "Brain",
+      "Neon City": "Glow",
+      "Quantum Computer": "Bits",
+      "Hologram": "Light",
+      "Cyborg": "Hybrid",
+      "Time Machine": "Paradox",
+      "Black Hole": "Gravity",
+      "ChatGPT": "Prompt",
+      "Smartwatch": "Wrist",
+      "Discord": "Chat",
+      "TikTok": "Scroll",
+      "Bitcoin": "Satoshi",
+      "Virtual Reality": "Headset",
+      "Drone": "Propeller",
+      "Taco Bell": "Crunchy",
+      "Bubble Tea": "Tapioca",
+      "Pepperoni Pizza": "Crust",
+      "Chocolate Donut": "Glazed",
+      "Sushi Roll": "Seaweed",
+      "French Fries": "Crispy",
+      "Minecraft": "Blocks",
+      "Spider-Man": "Web",
+      "Super Mario": "Mushroom",
+      "Lightsaber": "Plasma",
+      "Pokémon": "Pikachu",
+      "Batman": "Gotham",
+      "Eiffel Tower": "Paris",
+      "Tokyo": "Shibuya",
+      "Pyramids of Giza": "Pharaoh",
+      "Grand Canyon": "River",
+      "Laser Grid": "Security",
+      "Master Disguise": "Costume",
+      "Bank Vault": "Titanium",
+      "Hidden Wiretap": "Audio"
+    };
+
+    if (clueDict[word]) return clueDict[word];
+    const tokens = word.split(" ");
+    return tokens[tokens.length - 1] || "Target";
+  }
+
+  checkBotVotes() {
+    if (!this.isHost) return;
+    const botPlayers = this.game.players.filter(p => p.isBot && p.connected);
+
+    botPlayers.forEach((bot, idx) => {
+      setTimeout(() => {
+        if (this.game.phase !== "VOTING") return;
+        if (this.game.round.votes[bot.id]) return;
+
+        const candidates = this.game.players.filter(p => p.id !== bot.id && p.connected);
+        if (candidates.length > 0) {
+          const suspect = candidates[Math.floor(Math.random() * candidates.length)];
+          this.game.castVote(bot.id, suspect.id);
+        }
+      }, 1500 + idx * 800);
+    });
+  }
+
+  checkBotChameleonGuess() {
+    if (!this.isHost) return;
+    const chamId = this.game.round.votedOutPlayerId;
+    const chamPlayer = this.game.players.find(p => p.id === chamId);
+
+    if (chamPlayer && chamPlayer.isBot) {
+      setTimeout(() => {
+        if (this.game.phase !== "CHAMELEON_GUESS") return;
+        const candidates = this.game.round.topic?.guessCandidates || [];
+        const guess = candidates[Math.floor(Math.random() * candidates.length)] || "Unknown";
+        this.game.submitChameleonGuess(guess);
+      }, 2000);
     }
   }
 
