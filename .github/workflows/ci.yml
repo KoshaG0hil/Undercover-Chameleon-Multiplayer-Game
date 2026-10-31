@@ -27,7 +27,8 @@ jobs:
         run: |
           node tests/test_game_logic.js
 
-      - name: Run Pytest Wrapper
+      - name: Run Pytest Test Suite
         run: |
+          pip install --upgrade pip
           pip install pytest
           pytest -v tests/test_game_engine.py

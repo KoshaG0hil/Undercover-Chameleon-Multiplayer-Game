@@ -49,6 +49,7 @@ console.log("=== Running Undercover Chameleon Engine Test Suite ===");
   const agentState = game.getStateForPlayer(agentId);
   assert.strictEqual(agentState.round.topic.secretWord, game.round.topic.secretWord, "Agent must see the actual secret word");
 
+  game.clearIntervalTimer();
   console.log("✓ Test 2: Role Allocation & Cryptographic Secret Masking passed");
 }
 
@@ -77,6 +78,7 @@ console.log("=== Running Undercover Chameleon Engine Test Suite ===");
 
   // All clues submitted -> should transition to VOTING phase
   assert.strictEqual(game.phase, GAME_PHASES.VOTING, "Phase should advance to VOTING after all clues");
+  game.clearIntervalTimer();
   console.log("✓ Test 3: Clue Submission & Turn Advancing passed");
 }
 
@@ -109,6 +111,7 @@ console.log("=== Running Undercover Chameleon Engine Test Suite ===");
   assert.strictEqual(game.phase, GAME_PHASES.ROUND_OVER, "Game should be ROUND_OVER");
   assert.strictEqual(game.round.winner, "AGENTS", "Agents should win when Chameleon fails guess");
 
+  game.clearIntervalTimer();
   console.log("✓ Test 4: Voting Tally & Chameleon Caught Resolution passed");
 }
 
@@ -132,9 +135,11 @@ console.log("=== Running Undercover Chameleon Engine Test Suite ===");
   game.tallyVotes();
   assert.strictEqual(game.round.winner, "CHAMELEON", "Tie vote should allow Chameleon escape");
 
+  game.clearIntervalTimer();
   console.log("✓ Test 5: Chameleon Escape Resolution passed");
 }
 
 console.log("\n==========================================");
 console.log("  ALL 5 UNIT TESTS PASSED CLEANLY (100%)");
 console.log("==========================================");
+process.exit(0);
