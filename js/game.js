@@ -45,7 +45,9 @@ class GameEngine {
       winReason: ""
     };
     this.timerInterval = null;
-    this.onStateChange = () => {};
+    if (typeof this.onStateChange !== "function") {
+      this.onStateChange = () => {};
+    }
   }
 
   addPlayer(player) {

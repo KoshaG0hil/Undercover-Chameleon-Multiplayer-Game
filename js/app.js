@@ -28,6 +28,14 @@ class ApplicationController {
       { id: "fa-biohazard", label: "Hazard" }
     ];
 
+    this._botTurnInProgress = null;
+    this._botVotesScheduled = false;
+    this._botGuessScheduled = false;
+
+    if (typeof window !== "undefined") {
+      window.app = this;
+    }
+
     this.init();
   }
 
@@ -140,6 +148,7 @@ class ApplicationController {
     try {
       const { roomCode } = await this.network.createRoom();
       this.game.reset();
+      this.bindNetworkEvents();
       this.game.roomCode = roomCode;
       this.game.addPlayer(player);
 
@@ -263,6 +272,15 @@ class ApplicationController {
   handleStateUpdate(state) {
     const phase = state.phase;
 
+    if (this._lastObservedPhase !== phase) {
+      this._lastObservedPhase = phase;
+      this._botTurnInProgress = null;
+      this._botVotesScheduled = false;
+      this._botGuessScheduled = false;
+      this._lastClueKey = null;
+      this._lastVotingKey = null;
+    }
+
     switch (phase) {
       case "LOBBY":
         this.showView("viewLobby");
@@ -370,7 +388,11 @@ class ApplicationController {
     const activePlayer = this.game.players.find(p => p.id === activePlayerId);
 
     if (activePlayer && activePlayer.isBot) {
+      if (this._botTurnInProgress === activePlayer.id) return;
+      this._botTurnInProgress = activePlayer.id;
+
       setTimeout(() => {
+        this._botTurnInProgress = null;
         if (this.game.phase !== "CLUES") return;
         if (this.game.round.clueOrder[this.game.round.currentTurnIndex] !== activePlayer.id) return;
 
@@ -435,6 +457,9 @@ class ApplicationController {
 
   checkBotVotes() {
     if (!this.isHost) return;
+    if (this._botVotesScheduled) return;
+    this._botVotesScheduled = true;
+
     const botPlayers = this.game.players.filter(p => p.isBot && p.connected);
 
     botPlayers.forEach((bot, idx) => {
@@ -453,6 +478,9 @@ class ApplicationController {
 
   checkBotChameleonGuess() {
     if (!this.isHost) return;
+    if (this._botGuessScheduled) return;
+    this._botGuessScheduled = true;
+
     const chamId = this.game.round.votedOutPlayerId;
     const chamPlayer = this.game.players.find(p => p.id === chamId);
 
@@ -557,7 +585,9 @@ class ApplicationController {
       countText.innerText = `${round.clues.length} of ${round.clueOrder.length} Submitted`;
     }
 
-    if (feed) {
+    const clueKey = round.clues.map(c => c.playerId + ":" + c.clue).join("|");
+    if (feed && this._lastClueKey !== clueKey) {
+      this._lastClueKey = clueKey;
       if (round.clues.length === 0) {
         feed.innerHTML = `<div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-500 font-mono text-xs text-center">Awaiting first clue transmission...</div>`;
       } else {
@@ -613,7 +643,10 @@ class ApplicationController {
 
     // Grid of all players except self
     const otherPlayers = pState.players.filter(p => p.id !== this.playerId && p.connected);
-    if (suspectsGrid) {
+    const votingKey = `${otherPlayers.map(p => p.id).join(",")}_${round.hasVoted}_${this.selectedSuspectId}`;
+
+    if (suspectsGrid && this._lastVotingKey !== votingKey) {
+      this._lastVotingKey = votingKey;
       suspectsGrid.innerHTML = otherPlayers.map(p => {
         const clueObj = round.clues.find(c => c.playerId === p.id);
         const clueText = clueObj ? clueObj.clue : "No Clue";
