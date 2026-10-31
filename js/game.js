@@ -61,6 +61,7 @@ class GameEngine {
         name: player.name || `Agent ${this.players.length + 1}`,
         avatar: player.avatar || "fa-user-ninja",
         isHost: isFirst || player.isHost || false,
+        isBot: player.isBot || false,
         score: 0,
         role: "AGENT",
         isChameleon: false,
@@ -371,6 +372,7 @@ class GameEngine {
         avatar: p.avatar,
         score: p.score,
         isHost: p.isHost,
+        isBot: p.isBot || false,
         connected: p.connected,
         // Only reveal roles when round is over or for the player themselves
         role: (isRoundOver || p.id === playerId) ? p.role : "UNKNOWN",
